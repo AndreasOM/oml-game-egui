@@ -1,0 +1,18 @@
+[package]
+name = "oml-game-egui"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.68"
+atty = "0.2.14"
+egui = { version = "0.20.1", features = ["tracing"] }
+#oml-game = "0.32.2-alpha"
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+
+[dependencies.oml-game]
+path = "../oml-game"
+# version = ""
