@@ -103,6 +103,7 @@ impl EguiWrapper {
 			//events: 0,
 			//has_focus: 0,
 			screen_rect: Some(egui::Rect::from_center_size(Default::default(), screen_size_in_points)),
+			pixels_per_point: Some(self.pixels_per_point),
 			..Default::default()
 		}
 	}
