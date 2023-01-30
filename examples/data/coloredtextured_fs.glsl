@@ -8,6 +8,7 @@ uniform sampler2D texture0;
 
 void main()
 {
-	FragColor = oColor * texture( texture0, oTexCoords ) + vec4( oTexCoords.y, 0, 0, 1);
+//	FragColor = oColor * texture( texture0, oTexCoords ) + vec4( oTexCoords.y, 0, 0, 1);
+	FragColor = oColor * texture( texture0, oTexCoords );
 	//FragColor = oColor * vec4( oTexCoords, 1, 2);
 } 

@@ -127,7 +127,7 @@ impl App for MinimalApp {
 			self.is_done = true;
 		}
 
-		self.scaling = 1.0;
+		self.scaling = 0.5; // abused for zoom
 
 		self.viewport_size = wuc.window_size;
 
@@ -141,17 +141,91 @@ impl App for MinimalApp {
 			renderer.update(&mut self.system);
 		}
 
-		self.egui_wrapper.update( wuc );
+		self.egui_wrapper.update(wuc);
 		self.egui_wrapper.run(&mut self.system, |ctx| {
 			ctx.set_visuals(egui::style::Visuals::light());
 			ctx.set_visuals(egui::style::Visuals::dark());
+			/*
+			let mut style = (*ctx.style()).clone();
+			style.override_text_style = Some(
+				egui::TextStyle::Heading, //egui::FontId::new(30.0, egui::FontFamily::Proportional)
+			);
+
+			style.text_styles = [
+				(
+					egui::TextStyle::Heading,
+					egui::FontId::new(30.0, egui::FontFamily::Proportional),
+				),
+				(
+					egui::TextStyle::Name("Heading2".into()),
+					egui::FontId::new(25.0, egui::FontFamily::Proportional),
+				),
+				(
+					egui::TextStyle::Name("Context".into()),
+					egui::FontId::new(23.0, egui::FontFamily::Proportional),
+				),
+				(
+					egui::TextStyle::Body,
+					egui::FontId::new(18.0, egui::FontFamily::Proportional),
+				),
+				(
+					egui::TextStyle::Monospace,
+					egui::FontId::new(14.0, egui::FontFamily::Proportional),
+				),
+				(
+					egui::TextStyle::Button,
+					egui::FontId::new(14.0, egui::FontFamily::Proportional),
+				),
+				(
+					egui::TextStyle::Small,
+					egui::FontId::new(10.0, egui::FontFamily::Proportional),
+				),
+			]
+			.into();
+
+			ctx.set_style(style);
+			*/
+
+			egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+				// The top panel is often a good place for a menu bar:
+				egui::menu::bar(ui, |ui| {
+					ui.menu_button("File", |ui| {
+						if ui.button("Quit").clicked() {
+							// frame.quit();
+						}
+					});
+				});
+			});
+			/*
+			egui::SidePanel::left("my_side_panel").show(ctx, |ui| {
+				if ui.button("Quit").clicked() {
+					// frame.quit();
+				}
+			});
+			*/
+
 			egui::CentralPanel::default().show(ctx, |ui| {
 				ui.heading("My egui Application");
 				ui.heading("AAAAAAAAAAAAAAA");
 				ui.heading("... is not working yet!");
 				ui.add(egui::Slider::new(&mut self.age, 0..=120).text("age"));
+				if ui.button("Quit?").clicked() {}
+
+				ui.image(
+					egui::epaint::TextureId::Managed(0),
+					egui::Vec2 {
+						x: 1024.0,
+						y: 256.0,
+					},
+				);
 			});
 
+			ctx.set_visuals(egui::style::Visuals::light());
+			egui::Window::new("My Window")
+				.resizable(true)
+				.show(ctx, |ui| {
+					ui.label("Hello World!");
+				});
 			Ok(())
 		});
 

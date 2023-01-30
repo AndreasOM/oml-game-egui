@@ -10,14 +10,16 @@ use oml_game::window::WindowUpdateContext;
 
 #[derive(Debug, Default)]
 pub struct EguiWrapper {
-	egui_ctx:       egui::Context,
-	shapes:         Vec<egui::epaint::ClippedShape>,
+	egui_ctx: egui::Context,
+	shapes: Vec<egui::epaint::ClippedShape>,
 	textures_delta: egui::TexturesDelta,
-	effect_id:      u16,
-	aspect_ratio:   f32,
-	texture_ids:    HashMap<egui::epaint::TextureId, u16>,
-	size:			Vector2,
+	effect_id: u16,
+	aspect_ratio: f32,
+	texture_ids: HashMap<egui::epaint::TextureId, u16>,
+	size: Vector2,
 	pixels_per_point: f32,
+	events: Vec<egui::Event>,
+	primary_mouse_button_was_pressed: bool,
 }
 
 impl EguiWrapper {
@@ -30,6 +32,56 @@ impl EguiWrapper {
 		self.effect_id = effect_id;
 	}
 	pub fn update(&mut self, wuc: &mut WindowUpdateContext) -> anyhow::Result<()> {
+		let scaling = 0.5;
+		let mut cursor_pos = Vector2::zero();
+		cursor_pos.x = 0.5 * scaling * wuc.window_size.x * (2.0 * wuc.mouse_pos.x - 1.0);
+		cursor_pos.y = 0.5 * scaling * wuc.window_size.y * (2.0 * wuc.mouse_pos.y - 1.0);
+
+		cursor_pos.x = 0.5 * scaling * wuc.window_size.x * (2.0 * wuc.mouse_pos.x - 1.0);
+		cursor_pos.y = -0.5 * scaling * wuc.window_size.y * (2.0 * wuc.mouse_pos.y - 1.0);
+
+		self.events.push(egui::Event::PointerMoved(egui::Pos2 {
+			x: cursor_pos.x,
+			y: cursor_pos.y,
+		}));
+		/*
+		PointerButton {
+				pos: Pos2,
+				button: PointerButton,
+				pressed: bool,
+				modifiers: Modifiers,
+			},
+		*/
+		if wuc.was_mouse_button_pressed(0) {
+			tracing::debug!("Primary Mouse Button Pressed @ {:?}", &cursor_pos);
+			self.events.push(egui::Event::PointerButton {
+				pos:       egui::Pos2 {
+					x: cursor_pos.x,
+					y: cursor_pos.y,
+				},
+				button:    egui::PointerButton::Primary,
+				pressed:   true,
+				modifiers: egui::Modifiers::default(),
+			});
+			self.primary_mouse_button_was_pressed = true;
+		/*
+		self.events.push(
+			egui::Event::Zoom((50.0 / 125.0f32).exp())
+		);
+		*/
+		} else if wuc.was_mouse_button_released(0) {
+			//} else if self.primary_mouse_button_was_pressed {
+			self.events.push(egui::Event::PointerButton {
+				pos:       egui::Pos2 {
+					x: cursor_pos.x,
+					y: cursor_pos.y,
+				},
+				button:    egui::PointerButton::Primary,
+				pressed:   false,
+				modifiers: egui::Modifiers::default(),
+			});
+			self.primary_mouse_button_was_pressed = false;
+		}
 		Ok(())
 	}
 
@@ -65,9 +117,10 @@ impl EguiWrapper {
 			//my_app.ui(egui_ctx); // add panels, windows and widgets to `egui_ctx` here
 		});
 
-		tracing::debug!("{:?}", full_output.shapes);
+		// tracing::debug!("{:?}", full_output.shapes);
 		self.shapes = full_output.shapes;
 		self.textures_delta.append(full_output.textures_delta);
+		tracing::debug!("{:?}", full_output.platform_output.cursor_icon);
 		/*
 				let platform_output = full_output.platform_output;
 				my_integration.set_cursor_icon(platform_output.cursor_icon);
@@ -92,20 +145,26 @@ impl EguiWrapper {
 		Ok(())
 	}
 	fn gather_input(&mut self) -> RawInput {
-		tracing::debug!("pixels_per_point {}", self.pixels_per_point);
+		//tracing::debug!("pixels_per_point {}", self.pixels_per_point);
 		let screen_size_in_points = egui::Vec2 {
 			x: self.size.x / self.pixels_per_point,
 			y: self.size.y / self.pixels_per_point,
 		};
-		RawInput {
+		let ri = RawInput {
 			//dropped_files: Vec::new(),
 			//hovered_files: Vec::new(),
 			//events: 0,
 			//has_focus: 0,
-			screen_rect: Some(egui::Rect::from_center_size(Default::default(), screen_size_in_points)),
+			screen_rect: Some(egui::Rect::from_center_size(
+				Default::default(),
+				screen_size_in_points,
+			)),
 			pixels_per_point: Some(self.pixels_per_point),
+			events: self.events.drain(..).collect(),
 			..Default::default()
-		}
+		};
+		tracing::debug!("{:?}", ri.events);
+		ri
 	}
 	fn paint(&mut self, system: &mut System, renderer: &mut Renderer) -> anyhow::Result<()> {
 		let shapes = std::mem::take(&mut self.shapes);
@@ -115,7 +174,7 @@ impl EguiWrapper {
 			//tracing::debug!("{:?}, {:?}", id, image_delta.pos);
 			// self.set_texture(display, *id, image_delta);
 			if let Some(pos) = &image_delta.pos {
-				todo!();
+				//todo!();
 			} else {
 				match &image_delta.image {
 					egui::epaint::image::ImageData::Color(color_image) => {
@@ -135,8 +194,9 @@ impl EguiWrapper {
 							},
 						};
 						let mut tex = Texture::create_canvas(&name, size as u32);
-						let sy = 1.0;
-						let mtx = Matrix32::identity().with_scaling_xy(1.0, 1.0 / 8.0);
+						//let sy = 1.0;
+						let sy = font_image.size[1] as f32 / font_image.size[0] as f32;
+						let mtx = Matrix32::identity().with_scaling_xy(1.0, sy);
 						tex.set_mtx(&mtx);
 						let mut pos = Vector2::zero();
 						//let mut color = 0xffffffff;
@@ -194,8 +254,11 @@ impl EguiWrapper {
 		//tracing::debug!("Aspect Ratio: {:?}", &aspect_ratio );
 
 		let texture_id = &mesh.texture_id;
-		let tid = self.texture_ids.get(texture_id).unwrap();
-		tracing::debug!("Using texture {}", tid);
+		let tid = match self.texture_ids.get(texture_id) {
+			Some(tid) => tid,
+			None => return Ok(()),
+		};
+		// tracing::debug!("Using texture {}", tid);
 		renderer.use_texture_id_in_channel(*tid, 0);
 		//		renderer.render_textured_fullscreen_quad();
 
