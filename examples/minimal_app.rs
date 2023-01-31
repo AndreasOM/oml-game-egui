@@ -191,6 +191,7 @@ impl App for MinimalApp {
 				egui::menu::bar(ui, |ui| {
 					ui.menu_button("File", |ui| {
 						if ui.button("Quit").clicked() {
+							self.is_done = true;
 							// frame.quit();
 						}
 					});
