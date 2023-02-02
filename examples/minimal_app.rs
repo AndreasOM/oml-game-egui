@@ -18,18 +18,25 @@ enum EffectId {
 	Colored         = 3,
 }
 
+enum LayerId {
+	Egui  = 1,
+	Debug = 2,
+}
+
 #[derive(Debug, Default)]
 pub struct MinimalApp {
-	is_done:       bool,
-	total_time:    f64,
-	size:          Vector2,
-	viewport_size: Vector2,
-	scaling:       f32,
-	renderer:      Option<Renderer>,
-	system:        System,
-	cursor_pos:    Vector2,
-	egui_wrapper:  EguiWrapper,
-	age:           i8,
+	is_done:           bool,
+	total_time:        f64,
+	size:              Vector2,
+	viewport_size:     Vector2,
+	scaling:           f32,
+	renderer:          Option<Renderer>,
+	system:            System,
+	cursor_pos:        Vector2,
+	egui_wrapper:      EguiWrapper,
+	age:               i8,
+	use_blend_factors: bool,
+	cull_face:         bool,
 }
 
 impl MinimalApp {
@@ -88,13 +95,21 @@ impl App for MinimalApp {
 			"textured_fs.glsl",
 		));
 
-		renderer.register_effect(Effect::create(
-			&mut self.system,
-			EffectId::ColoredTextured as u16,
-			"ColoredTextured",
-			"coloredtextured_vs.glsl",
-			"coloredtextured_fs.glsl",
-		));
+		renderer.register_effect(
+			Effect::create(
+				&mut self.system,
+				EffectId::ColoredTextured as u16,
+				"ColoredTextured",
+				"coloredtextured_vs.glsl",
+				"coloredtextured_fs.glsl",
+			)
+			.with_cull_face(false), //.with_blend_func( oml_game::renderer::BlendFactor::One, oml_game::renderer::BlendFactor::OneMinusSrcAlpha )
+		);
+		/*
+		renderer.find_effect_mut_and_then( "ColoredTextured", |e| {
+			e.set_blend_func( oml_game::renderer::BlendFactor::One, oml_game::renderer::BlendFactor::OneMinusSrcAlpha );
+		});
+		*/
 		renderer.register_effect(Effect::create(
 			&mut self.system,
 			EffectId::Colored as u16,
@@ -105,9 +120,13 @@ impl App for MinimalApp {
 
 		self.renderer = Some(renderer);
 
-		self.egui_wrapper.setup();
+		let scale_factor = window.scale_factor() as f32;
+		tracing::debug!("scale_factor {}", scale_factor);
+		self.scaling = scale_factor;
+		self.egui_wrapper.setup(scale_factor);
 		self.egui_wrapper
 			.set_effect_id(EffectId::ColoredTextured as u16);
+		self.egui_wrapper.set_layer_id(LayerId::Egui as u8);
 		Ok(())
 	}
 
@@ -127,15 +146,37 @@ impl App for MinimalApp {
 			self.is_done = true;
 		}
 
-		self.scaling = 0.5; // abused for zoom
+		//		self.scaling = 0.5; // abused for zoom
+		//self.scaling = 1.0; //
 
 		self.viewport_size = wuc.window_size;
 
-		self.size.x = (self.scaling) * self.viewport_size.x;
-		self.size.y = (self.scaling) * self.viewport_size.y;
+		//		self.size.x = (self.scaling) * self.viewport_size.x;
+		//		self.size.y = (self.scaling) * self.viewport_size.y;
 
-		self.cursor_pos.x = 0.5 * self.scaling * wuc.window_size.x * (2.0 * wuc.mouse_pos.x - 1.0);
-		self.cursor_pos.y = 0.5 * self.scaling * wuc.window_size.y * (2.0 * wuc.mouse_pos.y - 1.0);
+		self.size.x = self.viewport_size.x;
+		self.size.y = self.viewport_size.y;
+
+		//		self.cursor_pos.x = 0.5 * self.scaling * wuc.window_size.x * (2.0 * wuc.mouse_pos.x - 1.0);
+		//		self.cursor_pos.y = 0.5 * self.scaling * wuc.window_size.y * (2.0 * wuc.mouse_pos.y - 1.0);
+
+		// self.cursor_pos.x = 0.5 * self.scaling * wuc.window_size.x * (wuc.mouse_pos.x - 1.0);
+		// self.cursor_pos.y = 0.5 * self.scaling * wuc.window_size.y * (wuc.mouse_pos.y - 1.0);
+
+		self.cursor_pos.x = wuc.mouse_pos.x * 0.5 * wuc.window_size.x - 0.25 * wuc.window_size.x;
+		self.cursor_pos.y = wuc.mouse_pos.y * 0.5 * wuc.window_size.y - 0.25 * wuc.window_size.y;
+
+		// a × (b + c)  =  a × b  +  a × c
+		/*
+		c = m * 0.5 * w - 0.25 * w
+		c = w * ( 0.5 * m) + w * ( -0.25 )
+		c = w * ( 0.5 * m - 0.25 )
+		*/
+		self.cursor_pos.x = wuc.window_size.x * (wuc.mouse_pos.x * 0.5 - 0.25);
+		self.cursor_pos.y = wuc.window_size.y * (wuc.mouse_pos.y * 0.5 - 0.25);
+
+		self.cursor_pos.x = 0.5 * (wuc.mouse_pos.x * wuc.window_size.x - 0.5 * wuc.window_size.x);
+		self.cursor_pos.y = 0.5 * (wuc.mouse_pos.y * wuc.window_size.y - 0.5 * wuc.window_size.y);
 
 		if let Some(renderer) = &mut self.renderer {
 			renderer.update(&mut self.system);
@@ -212,6 +253,9 @@ impl App for MinimalApp {
 				ui.add(egui::Slider::new(&mut self.age, 0..=120).text("age"));
 				if ui.button("Quit?").clicked() {}
 
+				ui.checkbox(&mut self.use_blend_factors, "Blend Factors");
+				ui.checkbox(&mut self.cull_face, "Cull Face");
+
 				ui.image(
 					egui::epaint::TextureId::Managed(0),
 					egui::Vec2 {
@@ -246,14 +290,21 @@ impl App for MinimalApp {
 			);
 			renderer.clear(&color);
 
-			let scaling = 0.5;
+			//let scaling = 0.5;
+			//let scaling = 0.25;
+			//let scaling = 1.0;
+			//let scaling = self.scaling;
+			//let scaling = 1.0 / self.scaling;
+			let half_scaling = 0.5 / self.scaling;
 			//				dbg!(&scaling);
-			let left = -self.size.x * scaling;
-			let right = self.size.x * scaling;
-			let top = self.size.y * scaling;
-			let bottom = -self.size.y * scaling;
+			let left = -self.size.x * half_scaling;
+			let right = self.size.x * half_scaling;
+			let top = self.size.y * half_scaling;
+			let bottom = -self.size.y * half_scaling;
 			let near = 1.0;
 			let far = -1.0;
+
+			//tracing::debug!("x: {} - {}, y: {} - {}", left, right, bottom, top);
 
 			//				dbg!(&top,&bottom);
 
@@ -263,11 +314,28 @@ impl App for MinimalApp {
 
 			renderer.set_mvp_matrix(&mvp);
 
+			//renderer.use_effect(EffectId::Textured as u16);
+			self.egui_wrapper.render(&mut self.system, renderer);
+
+			renderer.use_layer(LayerId::Debug as u8);
 			renderer.use_effect(EffectId::Textured as u16);
 			renderer.use_texture("cursor");
-			renderer.render_textured_quad(&self.cursor_pos, &Vector2::new(128.0, 128.0));
+			renderer.find_effect_mut_and_then("ColoredTextured", |e| {
+				if self.use_blend_factors {
+					e.set_blend_func(
+						oml_game::renderer::BlendFactor::One,
+						oml_game::renderer::BlendFactor::OneMinusSrcAlpha,
+					);
+				} else {
+					e.set_blend_func(
+						oml_game::renderer::BlendFactor::SrcAlpha,
+						oml_game::renderer::BlendFactor::OneMinusSrcAlpha,
+					);
+				}
+				e.set_cull_face(self.cull_face);
+			});
 
-			self.egui_wrapper.render(&mut self.system, renderer);
+			renderer.render_textured_quad(&self.cursor_pos, &Vector2::new(128.0, 128.0));
 			renderer.end_frame();
 		}
 	}

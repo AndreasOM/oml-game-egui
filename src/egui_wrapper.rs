@@ -14,7 +14,7 @@ pub struct EguiWrapper {
 	shapes: Vec<egui::epaint::ClippedShape>,
 	textures_delta: egui::TexturesDelta,
 	effect_id: u16,
-	aspect_ratio: f32,
+	layer_id: u8,
 	texture_ids: HashMap<egui::epaint::TextureId, u16>,
 	size: Vector2,
 	pixels_per_point: f32,
@@ -23,22 +23,27 @@ pub struct EguiWrapper {
 }
 
 impl EguiWrapper {
-	pub fn setup(&mut self) -> anyhow::Result<()> {
-		self.pixels_per_point = 1.0;
+	pub fn setup(&mut self, pixels_per_point: f32) -> anyhow::Result<()> {
+		self.pixels_per_point = pixels_per_point;
 		Ok(())
 	}
 
 	pub fn set_effect_id(&mut self, effect_id: u16) {
 		self.effect_id = effect_id;
 	}
+	pub fn set_layer_id(&mut self, layer_id: u8) {
+		self.layer_id = layer_id;
+	}
 	pub fn update(&mut self, wuc: &mut WindowUpdateContext) -> anyhow::Result<()> {
-		let scaling = 0.5;
 		let mut cursor_pos = Vector2::zero();
-		cursor_pos.x = 0.5 * scaling * wuc.window_size.x * (2.0 * wuc.mouse_pos.x - 1.0);
-		cursor_pos.y = 0.5 * scaling * wuc.window_size.y * (2.0 * wuc.mouse_pos.y - 1.0);
+		//		cursor_pos.x = 0.5 * scaling * wuc.window_size.x * (2.0 * wuc.mouse_pos.x - 1.0);
+		//		cursor_pos.y = 0.5 * scaling * wuc.window_size.y * (2.0 * wuc.mouse_pos.y - 1.0);
 
-		cursor_pos.x = 0.5 * scaling * wuc.window_size.x * (2.0 * wuc.mouse_pos.x - 1.0);
-		cursor_pos.y = -0.5 * scaling * wuc.window_size.y * (2.0 * wuc.mouse_pos.y - 1.0);
+		//cursor_pos.x = 0.5 * scaling * wuc.window_size.x * (2.0 * wuc.mouse_pos.x - 1.0);
+		//cursor_pos.y = -0.5 * scaling * wuc.window_size.y * (2.0 * wuc.mouse_pos.y - 1.0);
+
+		cursor_pos.x = 0.5 * (wuc.mouse_pos.x * wuc.window_size.x - 0.5 * wuc.window_size.x);
+		cursor_pos.y = -0.5 * (wuc.mouse_pos.y * wuc.window_size.y - 0.5 * wuc.window_size.y);
 
 		self.events.push(egui::Event::PointerMoved(egui::Pos2 {
 			x: cursor_pos.x,
@@ -89,38 +94,18 @@ impl EguiWrapper {
 	where
 		F: FnMut(&egui::Context) -> anyhow::Result<()>,
 	{
-		let mut raw_input: egui::RawInput = self.gather_input();
+		let raw_input: egui::RawInput = self.gather_input();
 
-		//state.input.screen_rect = Some(painter.screen_rect);
-		/*
-		raw_input.screen_rect = Some(egui::Rect {
-			min: egui::Pos2 {
-				x: -512.0 * self.aspect_ratio,
-				y: -512.0,
-			},
-			max: egui::Pos2 {
-				x: 512.0 * self.aspect_ratio,
-				y: 512.0,
-			},
-		});
-		*/
+		self.egui_ctx.begin_frame(raw_input);
 
-		//self.egui_ctx.begin_frame(...);
-		/*
-		egui::CentralPanel::default().show(&egui_ctx, |ui| {
-		});
-		*/
-		//self.egui_ctx.end_frame();
+		f(&self.egui_ctx).unwrap();
 
-		let full_output = self.egui_ctx.run(raw_input, |egui_ctx| {
-			f(&egui_ctx).unwrap();
-			//my_app.ui(egui_ctx); // add panels, windows and widgets to `egui_ctx` here
-		});
+		let full_output = self.egui_ctx.end_frame();
 
 		// tracing::debug!("{:?}", full_output.shapes);
 		self.shapes = full_output.shapes;
 		self.textures_delta.append(full_output.textures_delta);
-		tracing::debug!("{:?}", full_output.platform_output.cursor_icon);
+		//tracing::debug!("{:?}", full_output.platform_output.cursor_icon);
 		/*
 				let platform_output = full_output.platform_output;
 				my_integration.set_cursor_icon(platform_output.cursor_icon);
@@ -132,15 +117,8 @@ impl EguiWrapper {
 	}
 
 	pub fn render(&mut self, system: &mut System, renderer: &mut Renderer) -> anyhow::Result<()> {
-		//self.size = *renderer.size();
-		/*
-		let aspect_ratio = renderer.aspect_ratio();
-		self.aspect_ratio = aspect_ratio;
-		self.size.y = 1024.0; // fixed height mode
-		self.size.x = self.size.y * aspect_ratio;
-		*/
 		self.size = *renderer.size();
-		//tracing::debug!("Size {:?}", &self.size );
+		//tracing::debug!("Size {:?}", &self.size);
 		self.paint(system, renderer)?;
 		Ok(())
 	}
@@ -160,10 +138,11 @@ impl EguiWrapper {
 				screen_size_in_points,
 			)),
 			pixels_per_point: Some(self.pixels_per_point),
+			//			pixels_per_point: Some(self.pixels_per_point*2.0),
 			events: self.events.drain(..).collect(),
 			..Default::default()
 		};
-		tracing::debug!("{:?}", ri.events);
+		//tracing::debug!("{:?}", ri.events);
 		ri
 	}
 	fn paint(&mut self, system: &mut System, renderer: &mut Renderer) -> anyhow::Result<()> {
@@ -222,6 +201,7 @@ impl EguiWrapper {
 		let clipped_primitives = self.egui_ctx.tessellate(shapes);
 		//tracing::debug!("{:?}", &clipped_primitives);
 
+		renderer.use_layer(self.layer_id);
 		renderer.use_effect(self.effect_id);
 
 		for egui::ClippedPrimitive {
@@ -271,9 +251,9 @@ impl EguiWrapper {
 			1.0);
 			*/
 			let vertex = Vector2::new( v.pos.x, v.pos.y )
-			.scaled_vector2( &Vector2::new( 1.0, -1.0 ) )
+			.scaled_vector2( &Vector2::new( 1.0, -1.0 ) ) // upside down :(
 			//.scaled( 4.0 )
-			.add( &Vector2::new( 0.0, 0.0 ) )
+			//.add( &Vector2::new( 0.0, 0.0 ) )
 			//.add( &Vector2::new( 5.0*500.0, 4.0*-500.0 ) )
 			;
 
@@ -295,8 +275,6 @@ impl EguiWrapper {
 				.iter()
 				.map(|i| *vertice_map.get(&(*i as usize)).unwrap())
 				.collect();
-
-			//tracing::debug!("{:?}", &tm );
 			renderer.add_triangle(tm[0], tm[1], tm[2]);
 		}
 		Ok(())
