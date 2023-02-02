@@ -145,56 +145,76 @@ impl EguiWrapper {
 		//tracing::debug!("{:?}", ri.events);
 		ri
 	}
+
+	fn update_texture_from_image(
+		tex: &mut Texture,
+		ox: usize,
+		oy: usize,
+		image: &egui::epaint::image::ImageData,
+	) {
+		match image {
+			egui::epaint::image::ImageData::Color(color_image) => {
+				todo!();
+			},
+			egui::epaint::image::ImageData::Font(font_image) => {
+				let mut p = Vector2::zero();
+				//let mut color = 0xffffffff;
+				for y in 0..font_image.size[1] {
+					p.y = (oy + y) as f32;
+					for x in 0..font_image.size[0] {
+						p.x = (ox + x) as f32;
+						let coverage = font_image.pixels[y * font_image.size[0] + x];
+						let coverage = (coverage * 255.0) as u8;
+						let color = (coverage as u32) * 0x01010101;
+						tex.set_texel(&p, color);
+					}
+				}
+			},
+		};
+	}
+
 	fn paint(&mut self, system: &mut System, renderer: &mut Renderer) -> anyhow::Result<()> {
 		let shapes = std::mem::take(&mut self.shapes);
 		let mut textures_delta = std::mem::take(&mut self.textures_delta);
 
 		for (id, image_delta) in &textures_delta.set {
-			//tracing::debug!("{:?}, {:?}", id, image_delta.pos);
-			// self.set_texture(display, *id, image_delta);
 			if let Some(pos) = &image_delta.pos {
-				//todo!();
+				// update existing texture
+				let name = match id {
+					egui::epaint::TextureId::Managed(mid) => {
+						format!("egui-{}", mid)
+					},
+					egui::epaint::TextureId::User(_uid) => {
+						todo!();
+					},
+				};
+
+				renderer.find_texture_mut_and_then(&name, |tex| {
+					EguiWrapper::update_texture_from_image(tex, pos[0], pos[1], &image_delta.image);
+					tex.update_canvas();
+				});
 			} else {
-				match &image_delta.image {
-					egui::epaint::image::ImageData::Color(color_image) => {
-						let size = &color_image.size;
-						tracing::debug!("New ImageData::Color with size {:?}", &size);
+				// create new texture
+				let size = &image_delta.image.size();
+				let size = if size[0] > size[1] { size[0] } else { size[1] };
+				let name = match id {
+					egui::epaint::TextureId::Managed(mid) => {
+						format!("egui-{}", mid)
 					},
-					egui::epaint::image::ImageData::Font(font_image) => {
-						let size = &font_image.size;
-						tracing::debug!("New ImageData::Font with size {:?}", &size);
-						let size = if size[0] > size[1] { size[0] } else { size[1] };
-						let name = match id {
-							egui::epaint::TextureId::Managed(mid) => {
-								format!("egui-{}", mid)
-							},
-							egui::epaint::TextureId::User(_uid) => {
-								todo!();
-							},
-						};
-						let mut tex = Texture::create_canvas(&name, size as u32);
-						//let sy = 1.0;
-						let sy = font_image.size[1] as f32 / font_image.size[0] as f32;
-						let mtx = Matrix32::identity().with_scaling_xy(1.0, sy);
-						tex.set_mtx(&mtx);
-						let mut pos = Vector2::zero();
-						//let mut color = 0xffffffff;
-						for y in 0..font_image.size[1] {
-							pos.y = y as f32;
-							for x in 0..font_image.size[0] {
-								pos.x = x as f32;
-								let coverage = font_image.pixels[y * font_image.size[0] + x];
-								let coverage = (coverage * 255.0) as u8;
-								let color = (coverage as u32) * 0x01010101;
-								tex.set_texel(&pos, color);
-							}
-						}
-						tex.update_canvas();
-						let tid = renderer.register_texture(tex);
-						self.texture_ids.insert(*id, tid);
-						//todo!();
+					egui::epaint::TextureId::User(_uid) => {
+						todo!();
 					},
-				}
+				};
+				let mut tex = Texture::create_canvas(&name, size as u32);
+				let sy = image_delta.image.size()[1] as f32 / image_delta.image.size()[0] as f32;
+				let mtx = Matrix32::identity().with_scaling_xy(1.0, sy);
+				tex.set_mtx(&mtx);
+
+				EguiWrapper::update_texture_from_image(&mut tex, 0, 0, &image_delta.image);
+
+				tex.update_canvas();
+				let tid = renderer.register_texture(tex);
+				self.texture_ids.insert(*id, tid);
 			}
 		}
 

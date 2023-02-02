@@ -34,7 +34,7 @@ pub struct MinimalApp {
 	system:            System,
 	cursor_pos:        Vector2,
 	egui_wrapper:      EguiWrapper,
-	age:               i8,
+	font_size:        u16,
 	use_blend_factors: bool,
 	cull_face:         bool,
 }
@@ -127,6 +127,8 @@ impl App for MinimalApp {
 		self.egui_wrapper
 			.set_effect_id(EffectId::ColoredTextured as u16);
 		self.egui_wrapper.set_layer_id(LayerId::Egui as u8);
+
+		self.font_size = 10;
 		Ok(())
 	}
 
@@ -186,46 +188,48 @@ impl App for MinimalApp {
 		self.egui_wrapper.run(&mut self.system, |ctx| {
 			ctx.set_visuals(egui::style::Visuals::light());
 			ctx.set_visuals(egui::style::Visuals::dark());
-			/*
-			let mut style = (*ctx.style()).clone();
-			style.override_text_style = Some(
-				egui::TextStyle::Heading, //egui::FontId::new(30.0, egui::FontFamily::Proportional)
-			);
 
-			style.text_styles = [
-				(
-					egui::TextStyle::Heading,
-					egui::FontId::new(30.0, egui::FontFamily::Proportional),
-				),
-				(
-					egui::TextStyle::Name("Heading2".into()),
-					egui::FontId::new(25.0, egui::FontFamily::Proportional),
-				),
-				(
-					egui::TextStyle::Name("Context".into()),
-					egui::FontId::new(23.0, egui::FontFamily::Proportional),
-				),
-				(
-					egui::TextStyle::Body,
-					egui::FontId::new(18.0, egui::FontFamily::Proportional),
-				),
-				(
-					egui::TextStyle::Monospace,
-					egui::FontId::new(14.0, egui::FontFamily::Proportional),
-				),
-				(
-					egui::TextStyle::Button,
-					egui::FontId::new(14.0, egui::FontFamily::Proportional),
-				),
-				(
-					egui::TextStyle::Small,
-					egui::FontId::new(10.0, egui::FontFamily::Proportional),
-				),
-			]
-			.into();
+			if true {
+				let mut style = (*ctx.style()).clone();
+				style.override_text_style = Some(
+					egui::TextStyle::Heading, //egui::FontId::new(30.0, egui::FontFamily::Proportional)
+				);
 
-			ctx.set_style(style);
-			*/
+				style.text_styles = [
+					(
+						egui::TextStyle::Heading,
+						egui::FontId::new(30.0, egui::FontFamily::Proportional),
+					),
+					(
+						egui::TextStyle::Name("Heading2".into()),
+						egui::FontId::new(25.0, egui::FontFamily::Proportional),
+					),
+					(
+						egui::TextStyle::Name("Context".into()),
+						egui::FontId::new(23.0, egui::FontFamily::Proportional),
+					),
+					(
+						egui::TextStyle::Body,
+						egui::FontId::new(18.0, egui::FontFamily::Proportional),
+					),
+					(
+						egui::TextStyle::Monospace,
+						egui::FontId::new(14.0, egui::FontFamily::Proportional),
+					),
+					(
+						egui::TextStyle::Button,
+						egui::FontId::new(14.0, egui::FontFamily::Proportional),
+					),
+					(
+						egui::TextStyle::Small,
+//						egui::FontId::new(10.0, egui::FontFamily::Proportional),
+						egui::FontId::new(self.font_size as f32, egui::FontFamily::Proportional),
+					),
+				]
+				.into();
+
+				ctx.set_style(style);
+			}
 
 			egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
 				// The top panel is often a good place for a menu bar:
@@ -250,7 +254,8 @@ impl App for MinimalApp {
 				ui.heading("My egui Application");
 				ui.heading("AAAAAAAAAAAAAAA");
 				ui.heading("... is not working yet!");
-				ui.add(egui::Slider::new(&mut self.age, 0..=120).text("age"));
+				ui.add(egui::Slider::new(&mut self.font_size, 10..=120).text("Font Size"));
+				ui.label(egui::RichText::new("Small Text").text_style(egui::style::TextStyle::Small).strong());
 				if ui.button("Quit?").clicked() {}
 
 				ui.checkbox(&mut self.use_blend_factors, "Blend Factors");
