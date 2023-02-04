@@ -34,9 +34,10 @@ pub struct MinimalApp {
 	system:            System,
 	cursor_pos:        Vector2,
 	egui_wrapper:      EguiWrapper,
-	font_size:        u16,
+	font_size:         u16,
 	use_blend_factors: bool,
 	cull_face:         bool,
+	frame_count:       usize,
 }
 
 impl MinimalApp {
@@ -129,6 +130,8 @@ impl App for MinimalApp {
 		self.egui_wrapper.set_layer_id(LayerId::Egui as u8);
 
 		self.font_size = 10;
+
+		oml_game::DefaultTelemetry::enable();
 		Ok(())
 	}
 
@@ -143,6 +146,14 @@ impl App for MinimalApp {
 
 	fn update(&mut self, wuc: &mut WindowUpdateContext) -> anyhow::Result<()> {
 		self.total_time += wuc.time_step();
+		self.frame_count += 1;
+		oml_game::DefaultTelemetry::trace_f32("time_step", wuc.time_step() as f32);
+		if self.frame_count % 100 < 50 {
+			oml_game::DefaultTelemetry::trace_f32(
+				"sin of frame_count",
+				(1.0 / 60.0) * (self.frame_count as f32 * 0.01).sin() as f32,
+			);
+		}
 
 		if wuc.is_escape_pressed {
 			self.is_done = true;
@@ -222,7 +233,7 @@ impl App for MinimalApp {
 					),
 					(
 						egui::TextStyle::Small,
-//						egui::FontId::new(10.0, egui::FontFamily::Proportional),
+						//						egui::FontId::new(10.0, egui::FontFamily::Proportional),
 						egui::FontId::new(self.font_size as f32, egui::FontFamily::Proportional),
 					),
 				]
@@ -254,8 +265,15 @@ impl App for MinimalApp {
 				ui.heading("My egui Application");
 				ui.heading("AAAAAAAAAAAAAAA");
 				ui.heading("... is not working yet!");
-				ui.add(egui::Slider::new(&mut self.font_size, 10..=120).text("Font Size"));
-				ui.label(egui::RichText::new("Small Text").text_style(egui::style::TextStyle::Small).strong());
+				let r = ui.add(egui::Slider::new(&mut self.font_size, 10..=120).text("Font Size"));
+				if r.dragged() {
+					ctx.request_repaint();
+				};
+				ui.label(
+					egui::RichText::new("Small Text")
+						.text_style(egui::style::TextStyle::Small)
+						.strong(),
+				);
 				if ui.button("Quit?").clicked() {}
 
 				ui.checkbox(&mut self.use_blend_factors, "Blend Factors");
@@ -269,16 +287,77 @@ impl App for MinimalApp {
 					},
 				);
 			});
-
+			{
+				egui::Window::new("Telemetry")
+					.default_width(1000.0)
+					//.resize(|r| r.default_width( 1000.0 ))
+					//.resizable(true)
+					.show(ctx, |ui| {
+						use egui::plot::{Line, Plot, PlotPoints};
+						let mut lines = Vec::new();
+						let mut vlines = Vec::new();
+						{
+							let v = oml_game::DefaultTelemetry::get_f32("time_step");
+							let points: PlotPoints = v
+								.iter()
+								.enumerate()
+								.filter_map(|(i, f)| {
+									if let Some(f) = f {
+										Some([i as f64, *f as f64])
+									} else {
+										None
+									}
+								})
+								//.map(|(i, f)| [i as f64, *f as f64])
+								.collect();
+							let line = Line::new(points);
+							lines.push(("time_step", line));
+						}
+						{
+							let v = oml_game::DefaultTelemetry::get_f32("sin of frame_count");
+							let mut gap = false;
+							let points: PlotPoints = v
+								.iter()
+								.enumerate()
+								.filter_map(|(i, f)| {
+									let r = if let Some(f) = f {
+										Some([i as f64, *f as f64])
+									} else {
+										None
+									};
+									let prev_gap = gap;
+									gap = r.is_none();
+									if gap != prev_gap {
+										vlines.push(egui::widgets::plot::VLine::new(i as f64));
+									}
+									r
+								})
+								.collect();
+							let line = Line::new(points);
+							lines.push(("sin of time_step", line));
+						}
+						Plot::new("time_step").view_aspect(2.0).show(ui, |plot_ui| {
+							for (_name, line) in lines {
+								plot_ui.line(line)
+							}
+							for vl in vlines {
+								plot_ui.vline(vl);
+							}
+						});
+					});
+			}
+			/*
 			ctx.set_visuals(egui::style::Visuals::light());
 			egui::Window::new("My Window")
 				.resizable(true)
 				.show(ctx, |ui| {
 					ui.label("Hello World!");
 				});
+			*/
 			Ok(())
 		});
 
+		oml_game::DefaultTelemetry::update();
 		Ok(())
 	}
 

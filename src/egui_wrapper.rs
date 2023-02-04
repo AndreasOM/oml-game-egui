@@ -36,11 +36,6 @@ impl EguiWrapper {
 	}
 	pub fn update(&mut self, wuc: &mut WindowUpdateContext) -> anyhow::Result<()> {
 		let mut cursor_pos = Vector2::zero();
-		//		cursor_pos.x = 0.5 * scaling * wuc.window_size.x * (2.0 * wuc.mouse_pos.x - 1.0);
-		//		cursor_pos.y = 0.5 * scaling * wuc.window_size.y * (2.0 * wuc.mouse_pos.y - 1.0);
-
-		//cursor_pos.x = 0.5 * scaling * wuc.window_size.x * (2.0 * wuc.mouse_pos.x - 1.0);
-		//cursor_pos.y = -0.5 * scaling * wuc.window_size.y * (2.0 * wuc.mouse_pos.y - 1.0);
 
 		cursor_pos.x = 0.5 * (wuc.mouse_pos.x * wuc.window_size.x - 0.5 * wuc.window_size.x);
 		cursor_pos.y = -0.5 * (wuc.mouse_pos.y * wuc.window_size.y - 0.5 * wuc.window_size.y);
@@ -49,14 +44,7 @@ impl EguiWrapper {
 			x: cursor_pos.x,
 			y: cursor_pos.y,
 		}));
-		/*
-		PointerButton {
-				pos: Pos2,
-				button: PointerButton,
-				pressed: bool,
-				modifiers: Modifiers,
-			},
-		*/
+
 		if wuc.was_mouse_button_pressed(0) {
 			tracing::debug!("Primary Mouse Button Pressed @ {:?}", &cursor_pos);
 			self.events.push(egui::Event::PointerButton {
@@ -69,11 +57,6 @@ impl EguiWrapper {
 				modifiers: egui::Modifiers::default(),
 			});
 			self.primary_mouse_button_was_pressed = true;
-		/*
-		self.events.push(
-			egui::Event::Zoom((50.0 / 125.0f32).exp())
-		);
-		*/
 		} else if wuc.was_mouse_button_released(0) {
 			//} else if self.primary_mouse_button_was_pressed {
 			self.events.push(egui::Event::PointerButton {
@@ -191,7 +174,8 @@ impl EguiWrapper {
 
 				renderer.find_texture_mut_and_then(&name, |tex| {
 					EguiWrapper::update_texture_from_image(tex, pos[0], pos[1], &image_delta.image);
-					tex.update_canvas();
+					//tex.update_canvas();
+					tex.queue_canvas_update();
 				});
 			} else {
 				// create new texture
