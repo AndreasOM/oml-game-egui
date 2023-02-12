@@ -147,9 +147,9 @@ impl App for MinimalApp {
 	fn update(&mut self, wuc: &mut WindowUpdateContext) -> anyhow::Result<()> {
 		self.total_time += wuc.time_step();
 		self.frame_count += 1;
-		oml_game::DefaultTelemetry::trace_f32("time_step", wuc.time_step() as f32);
+		oml_game::DefaultTelemetry::trace::<f32>("time_step", wuc.time_step() as f32);
 		if self.frame_count % 100 < 50 {
-			oml_game::DefaultTelemetry::trace_f32(
+			oml_game::DefaultTelemetry::trace::<f32>(
 				"sin of frame_count",
 				(1.0 / 60.0) * (self.frame_count as f32 * 0.01).sin() as f32,
 			);
@@ -297,7 +297,7 @@ impl App for MinimalApp {
 						let mut lines = Vec::new();
 						let mut vlines = Vec::new();
 						{
-							let v = oml_game::DefaultTelemetry::get_f32("time_step");
+							let v = oml_game::DefaultTelemetry::get::<f32>("time_step");
 							let points: PlotPoints = v
 								.iter()
 								.enumerate()
@@ -314,7 +314,7 @@ impl App for MinimalApp {
 							lines.push(("time_step", line));
 						}
 						{
-							let v = oml_game::DefaultTelemetry::get_f32("sin of frame_count");
+							let v = oml_game::DefaultTelemetry::get::<f32>("sin of frame_count");
 							let mut gap = false;
 							let points: PlotPoints = v
 								.iter()
