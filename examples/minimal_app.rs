@@ -296,7 +296,10 @@ impl App for MinimalApp {
 						use egui::plot::{Line, Plot, PlotPoints};
 						let mut lines = Vec::new();
 						let mut vlines = Vec::new();
-						let x_offset = -1000.0;
+						let maximum_length = oml_game::DefaultTelemetry::maximum_length() as f64;
+						let frames = oml_game::DefaultTelemetry::frames() as f64;
+						let gone_frames = (frames - maximum_length).max(0.0);
+						let x_offset = gone_frames;
 						{
 							let v = oml_game::DefaultTelemetry::get::<f32>("time_step");
 							let points: PlotPoints = v
@@ -329,7 +332,9 @@ impl App for MinimalApp {
 									let prev_gap = gap;
 									gap = r.is_none();
 									if gap != prev_gap {
-										vlines.push(egui::widgets::plot::VLine::new(i as f64  + x_offset));
+										vlines.push(egui::widgets::plot::VLine::new(
+											i as f64 + x_offset,
+										));
 									}
 									r
 								})
