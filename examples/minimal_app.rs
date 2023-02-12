@@ -296,6 +296,7 @@ impl App for MinimalApp {
 						use egui::plot::{Line, Plot, PlotPoints};
 						let mut lines = Vec::new();
 						let mut vlines = Vec::new();
+						let x_offset = -1000.0;
 						{
 							let v = oml_game::DefaultTelemetry::get::<f32>("time_step");
 							let points: PlotPoints = v
@@ -303,7 +304,7 @@ impl App for MinimalApp {
 								.enumerate()
 								.filter_map(|(i, f)| {
 									if let Some(f) = f {
-										Some([i as f64, *f as f64])
+										Some([i as f64 + x_offset, *f as f64])
 									} else {
 										None
 									}
@@ -321,14 +322,14 @@ impl App for MinimalApp {
 								.enumerate()
 								.filter_map(|(i, f)| {
 									let r = if let Some(f) = f {
-										Some([i as f64, *f as f64])
+										Some([i as f64 + x_offset, *f as f64])
 									} else {
 										None
 									};
 									let prev_gap = gap;
 									gap = r.is_none();
 									if gap != prev_gap {
-										vlines.push(egui::widgets::plot::VLine::new(i as f64));
+										vlines.push(egui::widgets::plot::VLine::new(i as f64  + x_offset));
 									}
 									r
 								})
