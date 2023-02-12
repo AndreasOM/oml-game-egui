@@ -38,6 +38,8 @@ pub struct MinimalApp {
 	use_blend_factors: bool,
 	cull_face:         bool,
 	frame_count:       usize,
+
+	telemetry: oml_game_egui::EguiTelemetryWidget,
 }
 
 impl MinimalApp {
@@ -147,7 +149,8 @@ impl App for MinimalApp {
 	fn update(&mut self, wuc: &mut WindowUpdateContext) -> anyhow::Result<()> {
 		self.total_time += wuc.time_step();
 		self.frame_count += 1;
-		oml_game::DefaultTelemetry::trace::<f32>("time_step", wuc.time_step() as f32);
+		oml_game::DefaultTelemetry::trace::<f32>("target_frame_time", (1.0 / 30.0) / 1.0);
+		oml_game::DefaultTelemetry::trace::<f32>("time_step", (wuc.time_step() as f32) / 1.0);
 		if self.frame_count % 100 < 50 {
 			oml_game::DefaultTelemetry::trace::<f32>(
 				"sin of frame_count",
@@ -288,12 +291,26 @@ impl App for MinimalApp {
 				);
 			});
 			{
+				egui::Window::new("Telemetry Widget")
+					//.default_width(1000.0)
+					.resize(|r| r.default_width(1000.0))
+					.resizable(true)
+					.show(ctx, |ui| {
+						//ui.add(oml_game_egui::EguiTelemetryWidget::default());
+						self.telemetry.show(ui);
+					});
+			}
+			/*
+			{
 				egui::Window::new("Telemetry")
 					.default_width(1000.0)
 					//.resize(|r| r.default_width( 1000.0 ))
 					//.resizable(true)
 					.show(ctx, |ui| {
 						use egui::plot::{Line, Plot, PlotPoints};
+
+						let traces_info = oml_game::DefaultTelemetry::traces_info();
+						//tracing::debug!("Traces: {:#?}", traces_info);
 						let mut lines = Vec::new();
 						let mut vlines = Vec::new();
 						let maximum_length = oml_game::DefaultTelemetry::maximum_length() as f64;
@@ -352,6 +369,7 @@ impl App for MinimalApp {
 						});
 					});
 			}
+			*/
 			/*
 			ctx.set_visuals(egui::style::Visuals::light());
 			egui::Window::new("My Window")
