@@ -47,6 +47,7 @@ impl EguiWrapper {
 
 		if wuc.was_mouse_button_pressed(0) {
 			tracing::debug!("Primary Mouse Button Pressed @ {:?}", &cursor_pos);
+			wuc.consume_mouse_button_pressed(0);
 			self.events.push(egui::Event::PointerButton {
 				pos:       egui::Pos2 {
 					x: cursor_pos.x,
@@ -100,7 +101,7 @@ impl EguiWrapper {
 	}
 
 	pub fn render(&mut self, system: &mut System, renderer: &mut Renderer) -> anyhow::Result<()> {
-		self.size = *renderer.size();
+		self.size = *renderer.viewport_size();
 		//tracing::debug!("Size {:?}", &self.size);
 		self.paint(system, renderer)?;
 		Ok(())
