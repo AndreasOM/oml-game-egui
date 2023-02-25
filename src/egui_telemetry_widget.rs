@@ -148,7 +148,7 @@ impl EguiTelemetryWidget {
 		let gone_frames = (frames - maximum_length).max(0.0);
 		let x_offset = gone_frames;
 		let ys = self.ys_from_trace(trace_info.name());
-		tracing::debug!("{} -> {}", trace_info.name(), ys.len());
+		//tracing::debug!("{} -> {}", trace_info.name(), ys.len());
 		let points: PlotPoints = ys
 			.iter()
 			.enumerate()

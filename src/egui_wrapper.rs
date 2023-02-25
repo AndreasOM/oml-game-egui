@@ -37,8 +37,8 @@ impl EguiWrapper {
 	pub fn update(&mut self, wuc: &mut WindowUpdateContext) -> anyhow::Result<()> {
 		let mut cursor_pos = Vector2::zero();
 
-		cursor_pos.x = 0.5 * (wuc.mouse_pos.x * wuc.window_size.x - 0.5 * wuc.window_size.x);
-		cursor_pos.y = -0.5 * (wuc.mouse_pos.y * wuc.window_size.y - 0.5 * wuc.window_size.y);
+		cursor_pos.x = 1.0 * (wuc.mouse_pos.x * wuc.window_size.x - 0.5 * wuc.window_size.x);
+		cursor_pos.y = -1.0 * (wuc.mouse_pos.y * wuc.window_size.y - 0.5 * wuc.window_size.y);
 
 		self.events.push(egui::Event::PointerMoved(egui::Pos2 {
 			x: cursor_pos.x,

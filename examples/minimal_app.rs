@@ -179,8 +179,10 @@ impl App for MinimalApp {
 		// self.cursor_pos.x = 0.5 * self.scaling * wuc.window_size.x * (wuc.mouse_pos.x - 1.0);
 		// self.cursor_pos.y = 0.5 * self.scaling * wuc.window_size.y * (wuc.mouse_pos.y - 1.0);
 
+		/*
 		self.cursor_pos.x = wuc.mouse_pos.x * 0.5 * wuc.window_size.x - 0.25 * wuc.window_size.x;
 		self.cursor_pos.y = wuc.mouse_pos.y * 0.5 * wuc.window_size.y - 0.25 * wuc.window_size.y;
+		*/
 
 		// a × (b + c)  =  a × b  +  a × c
 		/*
@@ -188,11 +190,19 @@ impl App for MinimalApp {
 		c = w * ( 0.5 * m) + w * ( -0.25 )
 		c = w * ( 0.5 * m - 0.25 )
 		*/
+		/*
 		self.cursor_pos.x = wuc.window_size.x * (wuc.mouse_pos.x * 0.5 - 0.25);
 		self.cursor_pos.y = wuc.window_size.y * (wuc.mouse_pos.y * 0.5 - 0.25);
 
+		*/
+		/*
 		self.cursor_pos.x = 0.5 * (wuc.mouse_pos.x * wuc.window_size.x - 0.5 * wuc.window_size.x);
 		self.cursor_pos.y = 0.5 * (wuc.mouse_pos.y * wuc.window_size.y - 0.5 * wuc.window_size.y);
+		*/
+		self.cursor_pos.x = 1.0 * (wuc.mouse_pos.x * wuc.window_size.x - 0.5 * wuc.window_size.x);
+		self.cursor_pos.y = 1.0 * (wuc.mouse_pos.y * wuc.window_size.y - 0.5 * wuc.window_size.y);
+
+		//tracing::debug!("cursor {}, {}", self.cursor_pos.x, self.cursor_pos.y);
 
 		if let Some(renderer) = &mut self.renderer {
 			renderer.update(&mut self.system);
