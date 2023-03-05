@@ -20,12 +20,35 @@ pub struct EguiWrapper {
 	pixels_per_point: f32,
 	events: Vec<egui::Event>,
 	primary_mouse_button_was_pressed: bool,
+	input_disabled: bool,
 }
 
 impl EguiWrapper {
 	pub fn setup(&mut self, pixels_per_point: f32) -> anyhow::Result<()> {
 		self.pixels_per_point = pixels_per_point;
 		Ok(())
+	}
+
+	pub fn toggle_input(&mut self) -> bool {
+		self.input_disabled = !self.input_disabled;
+
+		self.input_disabled
+	}
+
+	pub fn enable_input(&mut self) {
+		self.input_disabled = false;
+	}
+
+	pub fn disable_input(&mut self) {
+		self.input_disabled = true;
+	}
+
+	pub fn set_input_disabled(&mut self, input_disabled: bool) {
+		self.input_disabled = input_disabled;
+	}
+
+	pub fn input_disabled(&self) -> bool {
+		self.input_disabled
 	}
 
 	pub fn set_effect_id(&mut self, effect_id: u16) {
@@ -35,41 +58,43 @@ impl EguiWrapper {
 		self.layer_id = layer_id;
 	}
 	pub fn update(&mut self, wuc: &mut WindowUpdateContext) -> anyhow::Result<()> {
-		let mut cursor_pos = Vector2::zero();
+		if !self.input_disabled {
+			let mut cursor_pos = Vector2::zero();
 
-		cursor_pos.x = 1.0 * (wuc.mouse_pos.x * wuc.window_size.x - 0.5 * wuc.window_size.x);
-		cursor_pos.y = -1.0 * (wuc.mouse_pos.y * wuc.window_size.y - 0.5 * wuc.window_size.y);
+			cursor_pos.x = 1.0 * (wuc.mouse_pos.x * wuc.window_size.x - 0.5 * wuc.window_size.x);
+			cursor_pos.y = -1.0 * (wuc.mouse_pos.y * wuc.window_size.y - 0.5 * wuc.window_size.y);
 
-		self.events.push(egui::Event::PointerMoved(egui::Pos2 {
-			x: cursor_pos.x,
-			y: cursor_pos.y,
-		}));
+			self.events.push(egui::Event::PointerMoved(egui::Pos2 {
+				x: cursor_pos.x,
+				y: cursor_pos.y,
+			}));
 
-		if wuc.was_mouse_button_pressed(0) {
-			tracing::debug!("Primary Mouse Button Pressed @ {:?}", &cursor_pos);
-			wuc.consume_mouse_button_pressed(0);
-			self.events.push(egui::Event::PointerButton {
-				pos:       egui::Pos2 {
-					x: cursor_pos.x,
-					y: cursor_pos.y,
-				},
-				button:    egui::PointerButton::Primary,
-				pressed:   true,
-				modifiers: egui::Modifiers::default(),
-			});
-			self.primary_mouse_button_was_pressed = true;
-		} else if wuc.was_mouse_button_released(0) {
-			//} else if self.primary_mouse_button_was_pressed {
-			self.events.push(egui::Event::PointerButton {
-				pos:       egui::Pos2 {
-					x: cursor_pos.x,
-					y: cursor_pos.y,
-				},
-				button:    egui::PointerButton::Primary,
-				pressed:   false,
-				modifiers: egui::Modifiers::default(),
-			});
-			self.primary_mouse_button_was_pressed = false;
+			if wuc.was_mouse_button_pressed(0) {
+				tracing::debug!("Primary Mouse Button Pressed @ {:?}", &cursor_pos);
+				wuc.consume_mouse_button_pressed(0);
+				self.events.push(egui::Event::PointerButton {
+					pos:       egui::Pos2 {
+						x: cursor_pos.x,
+						y: cursor_pos.y,
+					},
+					button:    egui::PointerButton::Primary,
+					pressed:   true,
+					modifiers: egui::Modifiers::default(),
+				});
+				self.primary_mouse_button_was_pressed = true;
+			} else if wuc.was_mouse_button_released(0) {
+				//} else if self.primary_mouse_button_was_pressed {
+				self.events.push(egui::Event::PointerButton {
+					pos:       egui::Pos2 {
+						x: cursor_pos.x,
+						y: cursor_pos.y,
+					},
+					button:    egui::PointerButton::Primary,
+					pressed:   false,
+					modifiers: egui::Modifiers::default(),
+				});
+				self.primary_mouse_button_was_pressed = false;
+			}
 		}
 		Ok(())
 	}
