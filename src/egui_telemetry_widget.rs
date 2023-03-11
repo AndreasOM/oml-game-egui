@@ -39,67 +39,56 @@ impl EguiTelemetryWidget {
 		self.count += 1;
 		if ui.is_rect_visible(rect) {
 			let traces_info = oml_game::DefaultTelemetry::traces_info();
-			//tracing::debug!("Traces: {:#?}", traces_info);
-			/*
-			tracing::debug!(
-				"fast frame: {:#?}",
-				oml_game::DefaultTelemetry::get::<f64>("fast frame")
-			);
-			*/
-			//ui.columns(2, |columns| {
-			//egui::Grid::new("egui_telemetry_widget_grid").show(ui, |ui| {
-			ui.horizontal(|ui| {
-				ui.vertical(|ui| {
-					egui::Frame::none()
-						.fill(egui::Color32::BLUE)
-						.show(ui, |ui| {
-							ui.label("Traces");
-							for ti in traces_info.iter() {
-								let color = self.next_auto_color();
-								ui.group(|ui| {
-									let tc = self
-										.trace_configs
-										.entry(ti.id().to_string())
-										//.or_default();
-										.or_insert(TraceConfig {
-											color, //: self.next_auto_color(),
-											..Default::default()
-										});
-									//let tc =
-									//	self.trace_configs.entry("hoax".to_string()).or_default();
-									ui.checkbox(&mut tc.enabled, "Checked");
-									ui.label(ti.name());
-									ui.set_min_height(20.0); // :HACK:
-									ui.end_row();
-								});
-							}
-						});
+			egui::SidePanel::left("traces_panel")
+				.resizable(true)
+				.default_width(150.0)
+				.width_range(80.0..=200.0)
+				.show_inside(ui, |ui| {
+					ui.vertical_centered(|ui| {
+						ui.heading("Traces");
+					});
+					egui::ScrollArea::vertical().show(ui, |ui| {
+						for ti in traces_info.iter() {
+							let color = self.next_auto_color();
+							ui.group(|ui| {
+								let tc = self
+									.trace_configs
+									.entry(ti.id().to_string())
+									//.or_default();
+									.or_insert(TraceConfig {
+										color, //: self.next_auto_color(),
+										..Default::default()
+									});
+								//let tc =
+								//	self.trace_configs.entry("hoax".to_string()).or_default();
+								ui.checkbox(&mut tc.enabled, ti.name());
+								//ui.label(ti.name());
+								//ui.set_min_height(20.0); // :HACK:
+								ui.end_row();
+							});
+						}
+					});
 				});
 
-				egui::Frame::none()
-					.fill(egui::Color32::GREEN)
-					.show(ui, |ui| {
-						Plot::new("time_step")
-							//.view_aspect(2.0)
-							.show(ui, |plot_ui| {
-								for ti in traces_info.iter() {
-									let tc =
-										self.trace_configs.entry(ti.id().to_string()).or_default();
-									if tc.enabled {
-										let color = tc.color;
-										let mut line = self.lines_from_trace_info(ti);
-										line = line.color(color);
-										plot_ui.line(line);
-									}
-								}
-							});
-					});
+			// :TODO: egui doesn't like the central panel with just a left panel
+			egui::TopBottomPanel::bottom("bottom_panel")
+				.resizable(false)
+				.min_height(0.0)
+				.show_inside(ui, |ui| {});
+
+			egui::CentralPanel::default().show_inside(ui, |ui| {
+				Plot::new("time_step").show(ui, |plot_ui| {
+					for ti in traces_info.iter() {
+						let tc = self.trace_configs.entry(ti.id().to_string()).or_default();
+						if tc.enabled {
+							let color = tc.color;
+							let mut line = self.lines_from_trace_info(ti);
+							line = line.color(color);
+							plot_ui.line(line);
+						}
+					}
+				});
 			});
-			//});
-			//});
-			//ui.label(format!("{}", self.count));
-			//ui.label(format!("{:#?}", self.trace_configs));
-			ui.allocate_space(ui.available_size());
 		}
 	}
 	/*
