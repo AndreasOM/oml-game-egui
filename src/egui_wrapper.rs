@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use egui::RawInput;
 use oml_game::math::Matrix32;
 use oml_game::math::Vector2;
+use oml_game::renderer::Color;
 use oml_game::renderer::Renderer;
 use oml_game::renderer::Texture;
 use oml_game::system::System;
@@ -21,12 +22,17 @@ pub struct EguiWrapper {
 	events: Vec<egui::Event>,
 	primary_mouse_button_was_pressed: bool,
 	input_disabled: bool,
+	color: Color,
 }
 
 impl EguiWrapper {
 	pub fn setup(&mut self, pixels_per_point: f32) -> anyhow::Result<()> {
 		self.pixels_per_point = pixels_per_point;
 		Ok(())
+	}
+
+	pub fn set_color(&mut self, color: &Color) {
+		self.color = *color;
 	}
 
 	pub fn toggle_input(&mut self) -> bool {
@@ -289,12 +295,16 @@ impl EguiWrapper {
 
 			//tracing::debug!("TC {}, {}", v.uv.x, v.uv.y);
 			renderer.set_tex_coords(&Vector2::new(v.uv.x, v.uv.y /*/8.0*/));
-			renderer.set_color(&oml_game::renderer::Color::from_rgba(
+			let color = oml_game::renderer::Color::from_rgba(
 				v.color.r() as f32 / 255.0,
 				v.color.g() as f32 / 255.0,
 				v.color.b() as f32 / 255.0,
 				v.color.a() as f32 / 255.0,
-			));
+			);
+
+			let color = color * self.color;
+
+			renderer.set_color(&color);
 			let vi = renderer.add_vertex(&vertex);
 			vertice_map.insert(i, vi);
 			//tracing::debug!("{} -> {}, {:?}", i, vi, v.pos );
