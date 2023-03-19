@@ -1371,7 +1371,7 @@ dependencies = [
 
 [[package]]
 name = "oml-game-egui"
-version = "0.38.0-alpha"
+version = "0.38.1-dev"
 dependencies = [
  "anyhow",
  "atty",
