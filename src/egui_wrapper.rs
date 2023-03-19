@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::RwLock;
 
 use egui::RawInput;
 use oml_game::math::Matrix32;
@@ -11,6 +12,88 @@ use oml_game::window::WindowUpdateContext;
 
 #[derive(Debug, Default)]
 pub struct EguiWrapper {
+	inner: RwLock<EguiWrapperInner>,
+}
+
+impl EguiWrapper {
+	pub fn setup(&mut self, pixels_per_point: f32) -> anyhow::Result<()> {
+		let mut inner = self.inner.write().unwrap();
+		inner.setup(pixels_per_point)
+	}
+
+	pub fn set_color(&mut self, color: &Color) {
+		let mut inner = self.inner.write().unwrap();
+		inner.set_color(color);
+	}
+
+	pub fn toggle_input(&mut self) -> bool {
+		let mut inner = self.inner.write().unwrap();
+		inner.toggle_input()
+	}
+
+	pub fn enable_input(&mut self) {
+		let mut inner = self.inner.write().unwrap();
+		inner.enable_input();
+	}
+
+	pub fn disable_input(&mut self) {
+		let mut inner = self.inner.write().unwrap();
+		inner.disable_input();
+	}
+
+	pub fn set_input_disabled(&mut self, input_disabled: bool) {
+		let mut inner = self.inner.write().unwrap();
+		inner.set_input_disabled(input_disabled);
+	}
+
+	pub fn input_disabled(&self) -> bool {
+		let mut inner = self.inner.read().unwrap();
+		inner.input_disabled()
+	}
+
+	pub fn set_effect_id(&mut self, effect_id: u16) {
+		let mut inner = self.inner.write().unwrap();
+		inner.set_effect_id(effect_id);
+	}
+	pub fn set_layer_id(&mut self, layer_id: u8) {
+		let mut inner = self.inner.write().unwrap();
+		inner.set_layer_id(layer_id);
+	}
+	pub fn update(&mut self, wuc: &mut WindowUpdateContext) -> anyhow::Result<()> {
+		let mut inner = self.inner.write().unwrap();
+		inner.update(wuc)
+	}
+
+	pub fn run<F>(&self, system: &mut System, mut f: F) -> anyhow::Result<()>
+	where
+		F: FnMut(&egui::Context) -> anyhow::Result<()>,
+	{
+		let mut inner = self.inner.write().unwrap();
+		inner.run(system, f)
+	}
+
+	pub fn render(&mut self, system: &mut System, renderer: &mut Renderer) -> anyhow::Result<()> {
+		let mut inner = self.inner.write().unwrap();
+		inner.render(system, renderer)
+	}
+	fn gather_input(&mut self) -> RawInput {
+		let mut inner = self.inner.write().unwrap();
+		inner.gather_input()
+	}
+
+	fn paint(&mut self, system: &mut System, renderer: &mut Renderer) -> anyhow::Result<()> {
+		let mut inner = self.inner.write().unwrap();
+		inner.paint(system, renderer)
+	}
+
+	fn paint_mesh(&self, renderer: &mut Renderer, mesh: egui::epaint::Mesh) -> anyhow::Result<()> {
+		let mut inner = self.inner.read().unwrap();
+		inner.paint_mesh(renderer, mesh)
+	}
+}
+
+#[derive(Debug, Default)]
+pub struct EguiWrapperInner {
 	egui_ctx: egui::Context,
 	shapes: Vec<egui::epaint::ClippedShape>,
 	textures_delta: egui::TexturesDelta,
@@ -25,7 +108,7 @@ pub struct EguiWrapper {
 	color: Color,
 }
 
-impl EguiWrapper {
+impl EguiWrapperInner {
 	pub fn setup(&mut self, pixels_per_point: f32) -> anyhow::Result<()> {
 		self.pixels_per_point = pixels_per_point;
 		Ok(())
@@ -205,7 +288,12 @@ impl EguiWrapper {
 				};
 
 				renderer.find_texture_mut_and_then(&name, |tex| {
-					EguiWrapper::update_texture_from_image(tex, pos[0], pos[1], &image_delta.image);
+					EguiWrapperInner::update_texture_from_image(
+						tex,
+						pos[0],
+						pos[1],
+						&image_delta.image,
+					);
 					//tex.update_canvas();
 					tex.queue_canvas_update();
 				});
@@ -226,7 +314,7 @@ impl EguiWrapper {
 				let mtx = Matrix32::identity().with_scaling_xy(1.0, sy);
 				tex.set_mtx(&mtx);
 
-				EguiWrapper::update_texture_from_image(&mut tex, 0, 0, &image_delta.image);
+				EguiWrapperInner::update_texture_from_image(&mut tex, 0, 0, &image_delta.image);
 
 				tex.update_canvas();
 				let tid = renderer.register_texture(tex);
