@@ -1348,7 +1348,8 @@ dependencies = [
 
 [[package]]
 name = "oml-game"
-version = "0.38.0-dev"
+version = "0.38.1-dev"
+source = "git+https://github.com/AndreasOM/oml-game?branch=episode-0038#ae0571305a9e4775993be40a80048502f6bb121f"
 dependencies = [
  "anyhow",
  "backtrace",
