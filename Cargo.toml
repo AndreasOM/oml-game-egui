@@ -1,6 +1,6 @@
 [package]
 name = "oml-game-egui"
-version = "0.39.0-dev"
+version = "0.40.0-dev"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -22,7 +22,7 @@ tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 
 [dependencies.oml-game]
-#path = "../../oml-game"
-#version = "0.38.0-dev"
-git = "https://github.com/AndreasOM/oml-game"
-branch = "episode-0038"
+# path = "../oml-game"
+version = "0.40.0-alpha"
+#git = "https://github.com/AndreasOM/oml-game"
+#branch = "episode-0038"
